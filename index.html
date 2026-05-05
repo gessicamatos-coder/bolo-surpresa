@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="author" content="Gessica Matos">
+    <title>Bolo surpresa</title>
+    <style>
+        body {
+            margin: 0;
+            font-family: Arial, Helvetica, sans-serif;
+            background: #FFe4ec;
+            text-align: center;
+            overflow: hidden;
+        }
+
+        .container {
+            margin-top: 50px;
+            position: relative;
+            z-index: 2;
+        }
+
+        .cake {
+            position: relative;
+            width: 250px;
+            margin: 50px auto;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .layer {
+            width: 100%;
+            height: 60px;
+            background: #ff69b4;
+            margin: 3px 0;
+            border-radius: 15px;
+            opacity: 0;
+            transform: translateY(50px);
+            animation: rise 0.8s ease forwards;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+
+        /* Cores diferentes para cada camada */
+        .layer:nth-child(2) { 
+            background: #ff85c1;
+            animation-delay: 0.2s;
+        }
+        .layer:nth-child(3) { 
+            background: #ff69b4;
+            animation-delay: 0.5s;
+        }
+        .layer:nth-child(4) { 
+            background: #ff4d94;
+            animation-delay: 0.8s;
+        }
+
+        @keyframes rise {
+            0% {
+                opacity: 0;
+                transform: translateY(80px) scale(0.8);
+            }
+            60% {
+                opacity: 1;
+                transform: translateY(-10px) scale(1.02);
+            }
+            100% {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+
+        .candle {
+            width: 12px;
+            height: 50px;
+            background: linear-gradient(to right, #fff, #f0f0f0);
+            position: relative;
+            margin-bottom: 15px;
+            cursor: pointer;
+            border-radius: 3px;
+            transition: transform 0.2s;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+            z-index: 3;
+        }
+
+        .candle:hover {
+            transform: scale(1.15);
+        }
+
+        .flame {
+            width: 18px;
+            height: 25px;
+            background: radial-gradient(circle, #ff6600, #ffcc00);
+            border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
+            position: absolute;
+            top: -28px;
+            left: -3px;
+            animation: flicker 0.15s infinite alternate;
+            box-shadow: 0 0 15px rgba(255,100,0,0.8);
+        }
+
+        @keyframes flicker {
+            0% { 
+                transform: scale(1) translateY(0px);
+                opacity: 0.9;
+            }
+            100% { 
+                transform: scale(1.2) translateY(-3px);
+                opacity: 1;
+            }
+        }
+
+        /* Pavio da vela */
+        .candle::before {
+            content: '';
+            position: absolute;
+            width: 2px;
+            height: 8px;
+            background: #333;
+            top: -8px;
+            left: 5px;
+        }
+
+        canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        p {
+            color: #d6336c;
+            font-weight: bold;
+            margin-top: 30px;
+            font-size: 1.1em;
+            background: rgba(255,255,255,0.7);
+            display: inline-block;
+            padding: 10px 20px;
+            border-radius: 50px;
+            backdrop-filter: blur(5px);
+        }
+
+        h1 {
+            color: #d6336c;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+            font-size: 2em;
+            margin-bottom: 20px;
+        }
+
+        /* Decorações do bolo */
+        .cake::before {
+            content: '🎂';
+            position: absolute;
+            font-size: 30px;
+            bottom: -40px;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Feliz Aniversário! 🎉</h1>
+
+        <div class="cake" id="cake">
+            <div class="candle" id="candle">
+                <div class="flame" id="flame"></div>
+            </div>
+            <div class="layer"></div>
+            <div class="layer"></div>
+            <div class="layer"></div>
+        </div>
+        <p>🎂 Clique na chama da vela para apagar e fazer chover confetes! 🕯️</p>
+    </div>
+    <canvas id="confettiCanvas"></canvas>
+
+    <script>
+        const flame = document.getElementById("flame");
+        const candle = document.getElementById("candle");
+        const canvas = document.getElementById("confettiCanvas");
+        const ctx = canvas.getContext("2d");
+
+        // Configurar tamanho do canvas
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        resizeCanvas();
+        window.addEventListener('resize', resizeCanvas);
+
+        let confettiPieces = [];
+        let animating = false;
+
+        // Clicar na vela apaga a chama
+        candle.addEventListener("click", (e) => {
+            e.stopPropagation();
+            if (flame.style.display !== "none") {
+                flame.style.display = "none";
+                startConfetti();
+                // Muda o texto após apagar
+                const paragraph = document.querySelector('p');
+                paragraph.innerHTML = '🎉 Parabéns! 🎉 <br> Muitas felicidades! 🎂';
+            }
+        });
+
+        function startConfetti() {
+            // Criar 300 confetes para mais impacto
+            for (let i = 0; i < 300; i++) {
+                confettiPieces.push({
+                    x: Math.random() * canvas.width,
+                    y: Math.random() * canvas.height - canvas.height,
+                    size: Math.random() * 10 + 3,
+                    speed: Math.random() * 4 + 2,
+                    color: `hsl(${Math.random() * 360}, 100%, 60%)`,
+                    rotation: Math.random() * 360,
+                    shape: Math.random() > 0.5 ? 'square' : 'circle'
+                });
+            }
+            
+            if (!animating) {
+                animateConfetti();
+                animating = true;
+            }
+        }
+
+        function animateConfetti() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            let hasConfetti = false;
+            
+            for (let i = 0; i < confettiPieces.length; i++) {
+                const c = confettiPieces[i];
+                c.y += c.speed;
+                c.rotation += 3;
+                
+                ctx.save();
+                ctx.translate(c.x, c.y);
+                ctx.rotate((c.rotation * Math.PI) / 180);
+                ctx.fillStyle = c.color;
+                
+                if (c.shape === 'circle') {
+                    ctx.beginPath();
+                    ctx.arc(0, 0, c.size/2, 0, Math.PI * 2);
+                    ctx.fill();
+                } else {
+                    ctx.fillRect(-c.size/2, -c.size/2, c.size, c.size);
+                }
+                
+                ctx.restore();
+                
+                if (c.y <= canvas.height + 50) {
+                    hasConfetti = true;
+                }
+            }
+            
+            // Remover confetes que saíram da tela
+            confettiPieces = confettiPieces.filter(c => c.y < canvas.height + 50);
+            
+            if (hasConfetti && confettiPieces.length > 0) {
+                requestAnimationFrame(animateConfetti);
+            } else {
+                animating = false;
+            }
+        }
+
+        // Verificar se as layers estão visíveis
+        console.log("Bolo carregado!", document.querySelectorAll('.layer').length, "camadas");
+        
+        // Mensagem de boas vindas
+        setTimeout(() => {
+            console.log("🎂 Clique na vela para a surpresa! 🎉");
+        }, 1000);
+    </script>
+</body>
+</html>
